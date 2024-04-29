@@ -43,13 +43,15 @@ To resume training a Swin-L model on Tiny ImageNet run the following command:
 ```
 python main.py --train --model swin --resume /path/to/checkpoint
 ```
-
 # Evaluate
 To evaluate a Swin-L model on the validation set of Tiny ImageNet run the following command:
 ```
 python main.py --evaluate /path/to/model --model swin
 ```
-
+# FGSD Attack
+```
+python FGSD.py --model [model name, swin/deit/vit/cait] --model_path [path to the model checkpoint]
+```
 # Citing
 ```bibtex
 @misc{huynh2022vision,

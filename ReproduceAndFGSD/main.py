@@ -58,7 +58,7 @@ def load_model(model_name, evaluate):
         batch_size = 64
     elif model_name == 'swin':
         model = create_model('swin_large_patch4_window12_384', pretrained=True, drop_path_rate=0.1)
-        batch_size = 32
+        batch_size = 16
     elif model_name == 'vit':
         model = create_model('vit_large_patch16_384', pretrained=True, drop_path_rate=0.1)
         batch_size = 64
