@@ -148,7 +148,7 @@ if __name__ == '__main__':
     )
 
     # set epsilon, which is the magnitude of the perturbation
-    epsilon_values = [0, 1, 2, 4, 8, 16, 24, 32, 48, 64]
+    epsilon_values = [0, 1, 2, 4, 8, 16, 24, 32, 48, 64, 96, 128]
     top_1_accs = []
     top_5_accs = []
 
@@ -159,7 +159,8 @@ if __name__ == '__main__':
         # Use FGSD Attack
         attack = FastGradientMethod(estimator=classifier, eps=epsilon / 255.0 / 0.225)
 
-        for batch_id, (data, target) in enumerate(tqdm(val_loader, desc=f'Perform FGSD Attack with Epsilon={epsilon} Progress')):
+        for batch_id, (data, target) in enumerate(
+                tqdm(val_loader, desc=f'Perform FGSD Attack with Epsilon={epsilon} Progress')):
 
             # Generate Adversarial Samples
             perturbed_data = attack.generate(x=data.numpy())
