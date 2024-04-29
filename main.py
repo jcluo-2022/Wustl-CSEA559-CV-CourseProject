@@ -165,3 +165,38 @@ if __name__ == '__main__':
             logger.info(f"Top 1 Validation Accuracy: {top_1_val_acc}\tTop 5 Validation Accuracy: {top_5_val_acc}")
             print("-"*get_terminal_size().columns)
 
+            import logging
+            import os
+
+            # 指定epoch号
+            epoch_number = i
+
+            # 设置日志文件的路径
+            log_path = f'models/{args.model}/validation_accuracy.log'
+
+            # 确保目录存在
+            os.makedirs(os.path.dirname(log_path), exist_ok=True)
+
+            # 创建一个logger
+            accuracy_logger = logging.getLogger('accuracy_logger')
+            accuracy_logger.setLevel(logging.INFO)  # 设置日志级别为INFO
+
+            # 创建一个handler，用于写入日志文件
+            file_handler = logging.FileHandler(log_path)
+            file_handler.setLevel(logging.INFO)
+
+            # 定义handler的输出格式
+            formatter = logging.Formatter('%(asctime)s - Epoch %(epoch)s - %(message)s')
+            file_handler.setFormatter(formatter)
+
+            # 给logger添加handler
+            accuracy_logger.addHandler(file_handler)
+
+            # 在格式化消息中加入epoch变量
+            file_handler.setFormatter(logging.Formatter(formatter.format(epoch=epoch_number)))
+
+            # 使用accuracy_logger记录特定的日志
+            accuracy_logger.info(
+                f"Top 1 Validation Accuracy: {top_1_val_acc}\tTop 5 Validation Accuracy: {top_5_val_acc}")
+            print("-" * get_terminal_size().columns)
+
