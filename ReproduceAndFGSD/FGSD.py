@@ -159,7 +159,7 @@ if __name__ == '__main__':
         # Use FGSD Attack
         attack = FastGradientMethod(estimator=classifier, eps=epsilon / 255.0 / 0.225)
 
-        for batch_id, (data, target) in enumerate(tqdm(val_loader, desc=f'Epsilon={epsilon} Progress')):
+        for batch_id, (data, target) in enumerate(tqdm(val_loader, desc=f'Perform FGSD Attack with Epsilon={epsilon} Progress')):
 
             # Generate Adversarial Samples
             perturbed_data = attack.generate(x=data.numpy())
@@ -191,6 +191,7 @@ if __name__ == '__main__':
         pick_path = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbed_val_dataset.pkl'
         pickle_data(perturbed_images_tensor, perturbed_labels, pick_path)
 
+        logger.info(f"Begin validating the model performance on the perturbed validation set")
         # evaluate the model on Adversarial Samples
         val_loss, top_1_acc, top_5_acc = validate(model, device, perturbed_loader, epsilon, can_visualize=False)
         top_1_accs.append(top_1_acc)
