@@ -13,6 +13,7 @@ import argparse, sys, torch
 import torch.nn as nn
 import torch.optim as optim
 
+
 def parse_args():
     parser = argparse.ArgumentParser('Vision Transformer training and evaluation script', add_help=False)
     parser.add_argument('--model', type=str, required=True, choices=['vit', 'deit', 'swin', 'cait', 'beit'],
@@ -23,7 +24,7 @@ def parse_args():
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--train', action='store_true', help='Train a model')
-    group.add_argument('--evaluate',  type=str, help='Evaluate a trained model at the given file path')
+    group.add_argument('--evaluate', type=str, help='Evaluate a trained model at the given file path')
     parser.add_argument('--throughput', action='store_true', help='Test throughput only')
     parser.add_argument('--resume', type=str, help='Resume training')
 
@@ -36,7 +37,7 @@ def parse_args():
     parser.add_argument('--no-randerase', action='store_false', dest='randerase', help='Disable random erasing')
     parser.add_argument('--randaug', action='store_true', default=False)
 
-    #optimizer
+    # optimizer
     parser.add_argument('--optim', type=str, default='adamw', choices=['adamw', 'sgd'])
     parser.add_argument('--nesterov', action='store_true', default=True, help='Use nesterov momentum for SGD')
     parser.add_argument('--no-nesterov', action='store_false', dest='nesterov', help='Disable nesterov')
@@ -48,6 +49,7 @@ def parse_args():
     args, _ = parser.parse_known_args()
 
     return args
+
 
 def load_model(model_name, evaluate):
     if model_name == 'cait':
@@ -79,16 +81,19 @@ def load_model(model_name, evaluate):
 
     return model, batch_size
 
+
 def load_optimizer(args, model):
     if args.optim == 'adamw':
         optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
     elif args.optim == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=0.9, nesterov=args.nesterov)
+        optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=0.9,
+                              nesterov=args.nesterov)
     else:
         logger.error('Invalid optimizer name, please use either adamw or sgd')
         sys.exit(1)
 
     return optimizer
+
 
 if __name__ == '__main__':
     logger = create_logger()
@@ -105,7 +110,7 @@ if __name__ == '__main__':
     update_freq = true_batch_size // batch_size
     img_size = 384
     val_loader = load_val_data(img_size, batch_size if not args.throughput else 32)
-    
+
     if args.throughput:
         logger.info(f"Testing throughput of {args.model}")
         throughput(val_loader, model, logger)
@@ -126,14 +131,15 @@ if __name__ == '__main__':
             en_cutmix=args.cutmix,
             en_randerase=args.randerase
         )
-    
+
         if mixup:
             loss_fn = SoftTargetCrossEntropy()
         else:
             loss_fn = nn.CrossEntropyLoss(label_smoothing=args.label_smooth)
-        
+
         optimizer = load_optimizer(args, model)
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=ceil(len(train_loader)/update_freq)*epochs)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer,
+                                                         T_max=ceil(len(train_loader) / update_freq) * epochs)
         loss_scaler = NativeScaler()
 
         if args.resume:
@@ -150,20 +156,24 @@ if __name__ == '__main__':
         logger.info(f"Current lr: {optimizer.param_groups[0]['lr']}")
 
         for i in range(start_epoch, epochs):
-            logger.info(f"Epoch {i+1}")
-            train_loss = train(model, loss_fn, optimizer, device, train_loader, scheduler, loss_scaler, update_freq, mixup, random_erase)
+            logger.info(f"Epoch {i + 1}")
+            train_loss = train(model, loss_fn, optimizer, device, train_loader, scheduler, loss_scaler, update_freq,
+                               mixup, random_erase)
+
+            val_loss, top_1_val_acc, top_5_val_acc = validate(model, device, val_loader, i,
+                                                              can_visualize=i >= epochs // 2)
+
             torch.save({
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'scheduler_state_dict': scheduler.state_dict(),
                 'loss_scaler_state_dict': loss_scaler.state_dict(),
                 'start_epoch': i,
-            }, f'models/epoch{i+1}.pth')
-            val_loss, top_1_val_acc, top_5_val_acc = validate(model, device, val_loader, i, can_visualize=i>=epochs//2)
+            }, f'models/{args.model}/epoch{i + 1}_top1_acc:{top_1_val_acc}_top5_acc{top_5_val_acc}.pth')
 
             logger.info(f"Current lr: {optimizer.param_groups[0]['lr']}")
             logger.info(f"Top 1 Validation Accuracy: {top_1_val_acc}\tTop 5 Validation Accuracy: {top_5_val_acc}")
-            print("-"*get_terminal_size().columns)
+            print("-" * get_terminal_size().columns)
 
             import logging
             import os
@@ -199,4 +209,3 @@ if __name__ == '__main__':
             accuracy_logger.info(
                 f"Top 1 Validation Accuracy: {top_1_val_acc}\tTop 5 Validation Accuracy: {top_5_val_acc}")
             print("-" * get_terminal_size().columns)
-
