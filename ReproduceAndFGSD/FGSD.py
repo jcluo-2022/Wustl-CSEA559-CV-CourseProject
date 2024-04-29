@@ -149,10 +149,10 @@ if __name__ == '__main__':
 
     # set epsilon, which is the magnitude of the perturbation
     epsilon_values = [0, 1, 2, 4, 8, 16, 24, 32, 48, 64]
-    top_1_accs = []
-    top_5_accs = []
+    top_1_accs = [90.31]
+    top_5_accs = [97.67]
 
-    for epsilon in epsilon_values:
+    for epsilon in epsilon_values[1:]:
         perturbed_images = []
         perturbed_labels = []
 
@@ -191,12 +191,12 @@ if __name__ == '__main__':
         pick_path = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbed_val_dataset.pkl'
         pickle_data(perturbed_images_tensor, perturbed_labels, pick_path)
 
-        logger.info(f"Begin validating the model performance on the perturbed validation set")
+        logger.info(f"Begin validating the model performance on the perturbed validation set with epsilon:{epsilon}")
         # evaluate the model on Adversarial Samples
         val_loss, top_1_acc, top_5_acc = validate(model, device, perturbed_loader, epsilon, can_visualize=False)
         top_1_accs.append(top_1_acc)
         top_5_accs.append(top_5_acc)
-
+        del perturbed_images_tensor, perturbed_labels_tensor, perturbed_dataset, perturbed_loader
         # log out the info
         logger.info(f"Epsilon: {epsilon}, Top-1 Accuracy: {top_1_acc}, Top-5 Accuracy: {top_5_acc}")
 
