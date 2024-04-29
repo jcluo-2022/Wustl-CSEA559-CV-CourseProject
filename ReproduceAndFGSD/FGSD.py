@@ -149,10 +149,10 @@ if __name__ == '__main__':
 
     # set epsilon, which is the magnitude of the perturbation
     epsilon_values = [0, 1, 2, 4, 8, 16, 24, 32, 48, 64]
-    top_1_accs = [90.31]
-    top_5_accs = [97.67]
+    top_1_accs = []
+    top_5_accs = []
 
-    for epsilon in epsilon_values[1:]:
+    for epsilon in epsilon_values:
         perturbed_images = []
         perturbed_labels = []
 
