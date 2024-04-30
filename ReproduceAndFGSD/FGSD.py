@@ -227,7 +227,7 @@ if __name__ == '__main__':
 
         # evaluate the model on Adversarial Samples
         val_loss, top_1_acc, top_5_acc = validate(model, device, perturbed_loader, epsilon, can_visualize=False)
-        success_attack_rate = success_attack_count / number_of_image
+        success_attack_rate = success_attack_count / number_of_image * 100
         success_attack_rates.append(success_attack_rate)
         top_1_accs.append(top_1_acc)
         top_5_accs.append(top_5_acc)
@@ -264,26 +264,29 @@ if __name__ == '__main__':
     plt.plot(epsilon_values, [top_1_accs[0]] * len(epsilon_values), 'b-', label='Clean Images')
     plt.plot(epsilon_values, top_1_accs, 'g-', label='FGSD Attack')
     plt.xlabel('Epsilon')
-    plt.ylabel('Top-1 Accuracy')
+    plt.ylabel('Top-1 Accuracy(%)')
     plt.title('Top-1 Accuracy vs Epsilon')
     plt.legend()
+    plt.xticks(np.arange(0, max(epsilon_values) + 1, 16))
 
     # Top-5 Accuracy
     plt.subplot(1, 3, 2)
     plt.plot(epsilon_values, [top_5_accs[0]] * len(epsilon_values), 'b-', label='Clean Images')
     plt.plot(epsilon_values, top_5_accs, 'g-', label='FGSD Attack')
     plt.xlabel('Epsilon')
-    plt.ylabel('Top-5 Accuracy')
+    plt.ylabel('Top-5 Accuracy(%)')
     plt.title('Top-5 Accuracy vs Epsilon')
     plt.legend()
+    plt.xticks(np.arange(0, max(epsilon_values) + 1, 16))
 
     # Attack Success Rate
     plt.subplot(1, 3, 3)
     plt.plot(epsilon_values, success_attack_rates, 'r-', label='Attack Success Rate')
     plt.xlabel('Epsilon')
-    plt.ylabel('Success Rate')
+    plt.ylabel('Attack Success Rate(%)')
     plt.title('Attack Success Rate vs Epsilon')
     plt.legend()
+    plt.xticks(np.arange(0, max(epsilon_values) + 1, 16))
 
     plt.tight_layout()
     plt.savefig(f'./FGSD/{args.model}/performance_vs_epsilon.png')
