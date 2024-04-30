@@ -152,7 +152,7 @@ if __name__ == '__main__':
     top_1_accs = []
     top_5_accs = []
 
-    for epsilon in epsilon_values:
+    for epsilon in epsilon_values[3:]:
         perturbed_images = []
         perturbed_labels = []
 
@@ -180,7 +180,7 @@ if __name__ == '__main__':
                 save_image(perturbation, os.path.join(perturb_dir, f'batch_{batch_id}_image_{idx}.png'))
                 save_image(p_image_tensor, os.path.join(perturbed_dir, f'batch_{batch_id}_image_{idx}.png'))
 
-                visualize(args.model, model, device, p_image_tensor, perturbation, target[idx], batch_id, idx, epsilon)
+                visualize(args.model, model, device, data[idx], perturbation, target[idx], batch_id, idx, epsilon)
 
         # Create Dataloader for Adversarial Samples
         perturbed_images_tensor = torch.tensor(np.vstack(perturbed_images), dtype=torch.float32)
