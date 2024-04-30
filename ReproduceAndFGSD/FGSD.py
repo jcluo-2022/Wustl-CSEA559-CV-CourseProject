@@ -151,7 +151,7 @@ if __name__ == '__main__':
     attack_base = FastGradientMethod(estimator=classifier, eps=base_epsilon)
     all_perturbations = []
 
-    for data, target in tqdm(val_loader, desc="Generating perturbations for the entire validation set"):
+    for batch_id, (data, target) in enumerate(tqdm(val_loader, desc="Generating perturbations for the entire validation set")):
 
         original_data = data.numpy()
 
@@ -167,7 +167,7 @@ if __name__ == '__main__':
 
     # Save all pertubation tensors
     torch.save(all_perturbations_tensor, f'./FGSD/{args.model}/all_perturbations.pt')
-    del all_perturbations_tensor
+    del all_perturbations_tensor, all_perturbations
 
     # load perturbation tensors
     base_perturbations = torch.load(f'./FGSD/{args.model}/all_perturbations.pt')
@@ -225,7 +225,6 @@ if __name__ == '__main__':
         pick_path = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbed_val_dataset.pkl'
         pickle_data(perturbed_images_tensor, true_labels_tensor, pick_path)
 
-        logger.info(f"Begin validating the model performance on the perturbed validation set with epsilon:{epsilon}")
         # evaluate the model on Adversarial Samples
         val_loss, top_1_acc, top_5_acc = validate(model, device, perturbed_loader, epsilon, can_visualize=False)
         success_attack_rate = success_attack_count / number_of_image
