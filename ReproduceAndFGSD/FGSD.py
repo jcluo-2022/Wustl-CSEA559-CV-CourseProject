@@ -215,13 +215,15 @@ if __name__ == '__main__':
 
         # Create Dataloader for Adversarial Samples
         perturbed_images_tensor = torch.tensor(np.vstack(perturbed_images), dtype=torch.float32)
-        perturbed_labels_tensor = torch.tensor(np.concatenate(true_labels), dtype=torch.long)
-        perturbed_dataset = TensorDataset(perturbed_images_tensor, perturbed_labels_tensor)
+        true_labels_tensor = torch.tensor(np.concatenate(true_labels), dtype=torch.long)
+        del true_labels, perturbed_images
+
+        perturbed_dataset = TensorDataset(perturbed_images_tensor, true_labels_tensor)
         perturbed_loader = DataLoader(perturbed_dataset, batch_size=val_loader.batch_size)
 
         # Save all the p-images and labels for future use.
         pick_path = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbed_val_dataset.pkl'
-        pickle_data(perturbed_images_tensor, true_labels, pick_path)
+        pickle_data(perturbed_images_tensor, true_labels_tensor, pick_path)
 
         logger.info(f"Begin validating the model performance on the perturbed validation set with epsilon:{epsilon}")
         # evaluate the model on Adversarial Samples
@@ -230,7 +232,7 @@ if __name__ == '__main__':
         success_attack_rates.append(success_attack_rate)
         top_1_accs.append(top_1_acc)
         top_5_accs.append(top_5_acc)
-        del perturbed_images_tensor, perturbed_labels_tensor, perturbed_dataset, perturbed_loader
+        del perturbed_dataset, perturbed_loader
         # log out the info
         logger.info(
             f"Epsilon: {epsilon}, Top-1 Accuracy: {top_1_acc}, Top-5 Accuracy: {top_5_acc}, Attack Success rate: {success_attack_rate}")
