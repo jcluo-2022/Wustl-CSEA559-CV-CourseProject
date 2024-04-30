@@ -151,10 +151,13 @@ if __name__ == '__main__':
     epsilon_values = [0, 1, 2, 4, 8, 16, 24, 32, 48, 64, 96, 128]
     top_1_accs = []
     top_5_accs = []
+    success_attack_rates = []
+    number_of_image = 10000  # There are total 10000 images in the validation set
 
-    for epsilon in epsilon_values[3:]:
+    for epsilon in epsilon_values:
         perturbed_images = []
         perturbed_labels = []
+        success_attack_count = 0
 
         # Use FGSD Attack
         attack = FastGradientMethod(estimator=classifier, eps=epsilon / 255.0 / 0.225)
@@ -180,7 +183,10 @@ if __name__ == '__main__':
                 save_image(perturbation, os.path.join(perturb_dir, f'batch_{batch_id}_image_{idx}.png'))
                 save_image(p_image_tensor, os.path.join(perturbed_dir, f'batch_{batch_id}_image_{idx}.png'))
 
-                visualize(args.model, model, device, data[idx], perturbation, target[idx], batch_id, idx, epsilon)
+                attack_success = visualize(args.model, model, device, data[idx], perturbation, target[idx], batch_id,
+                                           idx, epsilon)
+                if attack_success:
+                    success_attack_count += 1
 
         # Create Dataloader for Adversarial Samples
         perturbed_images_tensor = torch.tensor(np.vstack(perturbed_images), dtype=torch.float32)
@@ -195,21 +201,40 @@ if __name__ == '__main__':
         logger.info(f"Begin validating the model performance on the perturbed validation set with epsilon:{epsilon}")
         # evaluate the model on Adversarial Samples
         val_loss, top_1_acc, top_5_acc = validate(model, device, perturbed_loader, epsilon, can_visualize=False)
+        success_attack_rate = success_attack_count / number_of_image
+        success_attack_rates.append(success_attack_rate)
         top_1_accs.append(top_1_acc)
         top_5_accs.append(top_5_acc)
         del perturbed_images_tensor, perturbed_labels_tensor, perturbed_dataset, perturbed_loader
         # log out the info
-        logger.info(f"Epsilon: {epsilon}, Top-1 Accuracy: {top_1_acc}, Top-5 Accuracy: {top_5_acc}")
+        logger.info(
+            f"Epsilon: {epsilon}, Top-1 Accuracy: {top_1_acc}, Top-5 Accuracy: {top_5_acc}, Attack Success rate: {success_attack_rate}")
+
+    # save important data
+    with open(f'./FGSD/{args.model}/metrics.txt', 'w') as file:
+        file.write('Epsilon values: ')
+        file.write(', '.join(f"{eps:.4f}" for eps in epsilon_values) + '\n')
+
+        file.write('Top-1 Accuracies: ')
+        file.write(', '.join(f"{acc:.4f}" for acc in top_1_accs) + '\n')
+
+        file.write('Top-5 Accuracies: ')
+        file.write(', '.join(f"{acc:.4f}" for acc in top_5_accs) + '\n')
+
+        file.write('Attack Success Rates: ')
+        file.write(', '.join(f"{rate:.4f}" for rate in success_attack_rates) + '\n')
+
+    logger.info("Metrics saved to 'metrics.txt'.")
 
     # remove handler to prevent redundant log
     logger.removeHandler(file_handler)
     logger.removeHandler(stream_handler)
 
     # Prepare for the plot
-    plt.figure(figsize=(12, 6))
+    plt.figure(figsize=(18, 6))
 
     # Top-1 Accuracy
-    plt.subplot(1, 2, 1)
+    plt.subplot(1, 3, 1)
     plt.plot(epsilon_values, [top_1_accs[0]] * len(epsilon_values), 'b-', label='Clean Images')
     plt.plot(epsilon_values, top_1_accs, 'g-', label='FGSD Attack')
     plt.xlabel('Epsilon')
@@ -218,7 +243,7 @@ if __name__ == '__main__':
     plt.legend()
 
     # Top-5 Accuracy
-    plt.subplot(1, 2, 2)
+    plt.subplot(1, 3, 2)
     plt.plot(epsilon_values, [top_5_accs[0]] * len(epsilon_values), 'b-', label='Clean Images')
     plt.plot(epsilon_values, top_5_accs, 'g-', label='FGSD Attack')
     plt.xlabel('Epsilon')
@@ -226,5 +251,13 @@ if __name__ == '__main__':
     plt.title('Top-5 Accuracy vs Epsilon')
     plt.legend()
 
+    # Attack Success Rate
+    plt.subplot(1, 3, 3)
+    plt.plot(epsilon_values, success_attack_rates, 'r-', label='Attack Success Rate')
+    plt.xlabel('Epsilon')
+    plt.ylabel('Success Rate')
+    plt.title('Attack Success Rate vs Epsilon')
+    plt.legend()
+
     plt.tight_layout()
-    plt.savefig(f'./FGSD/{args.model}/accuracy_vs_epsilon.png')
+    plt.savefig(f'./FGSD/{args.model}/performance_vs_epsilon.png')

@@ -40,9 +40,6 @@ def visualize(x, pred, y, epoch):
 
 @torch.no_grad()
 def visualize(model_name, model, device, original_image, perturbation, true_label, batch, id_in_batch, epsilon):
-    #  1.5% chance to generate a visualization
-    if random.random() >= 0.015:
-        return
 
     model.eval()
     original_image = original_image.unsqueeze(0).to(device)
@@ -103,3 +100,5 @@ def visualize(model_name, model, device, original_image, perturbation, true_labe
     # 保存图像
     plt.savefig(path)
     plt.close(fig)
+
+    return logits_of_p_image[true_label] < logits_of_original_image[true_label]
