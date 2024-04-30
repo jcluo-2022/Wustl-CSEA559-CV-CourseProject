@@ -6,6 +6,7 @@ from torchvision.transforms import Normalize
 import random, torch
 import matplotlib.pyplot as plt
 
+
 def cut_long_label(str):
     str = str.split(",")
     if len(str) >= 3:
@@ -14,18 +15,19 @@ def cut_long_label(str):
         str = ",".join(str)
     return str
 
+
 @torch.no_grad()
 def visualize(x, pred, y, epoch):
     batch_size = len(y)
-    idx = random.randint(0, batch_size-1)
+    idx = random.randint(0, batch_size - 1)
 
     prediction = torch.max(pred.data, 1)[1][idx].item()
     actual = y[idx].item()
     inv_normalize = Normalize(
         mean=(-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225),
-        std=(1/0.229, 1/0.224, 1/0.225)
+        std=(1 / 0.229, 1 / 0.224, 1 / 0.225)
     )
-    random_sample = torch.round(torch.mul(inv_normalize(x[idx]), 225)).type(torch.ByteTensor).cpu().permute(1,2,0)
+    random_sample = torch.round(torch.mul(inv_normalize(x[idx]), 225)).type(torch.ByteTensor).cpu().permute(1, 2, 0)
 
     mapping = get_label_mapping()
     plt.imshow(random_sample)
@@ -35,18 +37,16 @@ def visualize(x, pred, y, epoch):
     plt.title(f"Label: {label_str}\nPrediction: {prediction_str}", wrap=True, fontsize=12)
     plt.tight_layout()
     plt.axis('off')
-    plt.savefig(f'predictions/val{epoch+1}_{idx}.png')
+    plt.savefig(f'predictions/val{epoch + 1}_{idx}.png')
 
 
 @torch.no_grad()
-def visualize(model_name, model, device, original_image, perturbation, true_label, batch, id_in_batch, epsilon):
-
+def visualize(model_name, model, device, original_image, p_image, true_label, batch, id_in_batch, epsilon):
     model.eval()
     original_image = original_image.unsqueeze(0).to(device)
-    perturbation = perturbation.unsqueeze(0).to(device)
+    p_image = p_image.unsqueeze(0).to(device)
 
     # get the perturbed image
-    p_image = original_image + perturbation
     # Predict the classes for the original and perturbed images
     logits_of_original_image = model(original_image)
     logits_of_p_image = model(p_image)
@@ -60,7 +60,7 @@ def visualize(model_name, model, device, original_image, perturbation, true_labe
     # Inverse the images
     original_image = inv_normalize(original_image[0]).cpu().detach()
     p_image = inv_normalize(p_image[0]).cpu().detach()
-    perturbation = inv_normalize(perturbation[0]).cpu().detach()
+    perturbation = p_image - original_image
 
     # get prediction label and probability
     probs_original, preds_original = torch.max(torch.nn.functional.softmax(logits_of_original_image, dim=1), 1)
@@ -97,8 +97,7 @@ def visualize(model_name, model, device, original_image, perturbation, true_labe
     path = os.path.join(directory, filename)
     os.makedirs(directory, exist_ok=True)
 
-    # 保存图像
     plt.savefig(path)
     plt.close(fig)
 
-    return logits_of_p_image[true_label] < logits_of_original_image[true_label]
+    return logits_of_p_image[:, true_label] < logits_of_original_image[:, true_label]

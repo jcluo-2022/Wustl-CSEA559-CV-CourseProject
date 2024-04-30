@@ -56,7 +56,7 @@ def load_train_data(img_size, magnitude, batch_size):
     f.close()
     return train_loader
 
-def load_val_data(img_size, batch_size):
+def load_val_data(img_size, batch_size, shuffle=True):
     with open('val_dataset.pkl', 'rb') as f:
         val_data, val_labels = pickle.load(f)
     transform = transforms.Compose([
@@ -73,7 +73,7 @@ def load_val_data(img_size, batch_size):
     val_loader = DataLoader(
         val_dataset,
         batch_size=batch_size,
-        shuffle=True,
+        shuffle=shuffle,
         num_workers=4,
         pin_memory=True
     )

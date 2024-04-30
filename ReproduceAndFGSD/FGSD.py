@@ -117,7 +117,7 @@ if __name__ == '__main__':
 
     randaug_magnitude = 9 if args.randaug else 0
     # train_loader = load_train_data(img_size, randaug_magnitude, batch_size)
-    val_loader = load_val_data(img_size, batch_size)
+    val_loader = load_val_data(img_size, batch_size, False)
 
     # Set logger
     logger = getLogger(__name__)
@@ -147,6 +147,30 @@ if __name__ == '__main__':
         nb_classes=200
     )
 
+    base_epsilon = 1 / 255.0 / 0.225
+    attack_base = FastGradientMethod(estimator=classifier, eps=base_epsilon)
+    all_perturbations = []
+
+    for data, target in tqdm(val_loader, desc="Generating perturbations for the entire validation set"):
+
+        original_data = data.numpy()
+
+        # perform FGSM
+        perturbed_data = attack_base.generate(x=original_data)
+        perturbations = perturbed_data - original_data
+
+        # Append pertubation
+        all_perturbations.append(torch.tensor(perturbations, dtype=torch.float))
+
+    # concat all perturbation tensors
+    all_perturbations_tensor = torch.cat(all_perturbations, dim=0)
+
+    # Save all pertubation tensors
+    torch.save(all_perturbations_tensor, f'./FGSD/{args.model}/all_perturbations.pt')
+    del all_perturbations_tensor
+
+    # load perturbation tensors
+    base_perturbations = torch.load(f'./FGSD/{args.model}/all_perturbations.pt')
     # set epsilon, which is the magnitude of the perturbation
     epsilon_values = [0, 1, 2, 4, 8, 16, 24, 32, 48, 64, 96, 128]
     top_1_accs = []
@@ -156,23 +180,24 @@ if __name__ == '__main__':
 
     for epsilon in epsilon_values:
         perturbed_images = []
-        perturbed_labels = []
+        true_labels = []
         success_attack_count = 0
-
-        # Use FGSD Attack
-        attack = FastGradientMethod(estimator=classifier, eps=epsilon / 255.0 / 0.225)
+        scaled_perturbations = (base_perturbations * epsilon).float()
 
         for batch_id, (data, target) in enumerate(
                 tqdm(val_loader, desc=f'Perform FGSD Attack with Epsilon={epsilon} Progress')):
 
+            start_idx = batch_id * data.size(0)
+            end_idx = start_idx + data.size(0)
+            perturbed_data = data + scaled_perturbations[start_idx:end_idx].to(data.device)
+
             # Generate Adversarial Samples
-            perturbed_data = attack.generate(x=data.numpy())
             perturbed_images.append(perturbed_data)
-            perturbed_labels.append(target.numpy())
+            true_labels.append(target.numpy())
 
             # Save Adversarial Samples and their perturbations
             for idx, p_image in enumerate(perturbed_data):
-                p_image_tensor = torch.tensor(p_image, dtype=torch.float)
+                p_image_tensor = p_image.detach()
                 perturbation = p_image_tensor - data[idx]
 
                 perturb_dir = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbation/{int(target[idx])}'
@@ -183,20 +208,20 @@ if __name__ == '__main__':
                 save_image(perturbation, os.path.join(perturb_dir, f'batch_{batch_id}_image_{idx}.png'))
                 save_image(p_image_tensor, os.path.join(perturbed_dir, f'batch_{batch_id}_image_{idx}.png'))
 
-                attack_success = visualize(args.model, model, device, data[idx], perturbation, target[idx], batch_id,
+                attack_success = visualize(args.model, model, device, data[idx], p_image_tensor, target[idx], batch_id,
                                            idx, epsilon)
                 if attack_success:
                     success_attack_count += 1
 
         # Create Dataloader for Adversarial Samples
         perturbed_images_tensor = torch.tensor(np.vstack(perturbed_images), dtype=torch.float32)
-        perturbed_labels_tensor = torch.tensor(np.concatenate(perturbed_labels), dtype=torch.long)
+        perturbed_labels_tensor = torch.tensor(np.concatenate(true_labels), dtype=torch.long)
         perturbed_dataset = TensorDataset(perturbed_images_tensor, perturbed_labels_tensor)
         perturbed_loader = DataLoader(perturbed_dataset, batch_size=val_loader.batch_size)
 
         # Save all the p-images and labels for future use.
         pick_path = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbed_val_dataset.pkl'
-        pickle_data(perturbed_images_tensor, perturbed_labels, pick_path)
+        pickle_data(perturbed_images_tensor, true_labels, pick_path)
 
         logger.info(f"Begin validating the model performance on the perturbed validation set with epsilon:{epsilon}")
         # evaluate the model on Adversarial Samples
