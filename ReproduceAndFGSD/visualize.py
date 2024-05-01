@@ -50,7 +50,7 @@ def visualize(model_name, model, device, original_image, p_image, true_label, ba
     # Predict the classes for the original and perturbed images
     logits_of_original_image = model(original_image)
     logits_of_p_image = model(p_image)
-
+    logits_of_perturbation = model(p_image - original_image)
     # Inverse normalization
     inv_normalize = Normalize(
         mean=(-0.485 / 0.229, -0.456 / 0.224, -0.406 / 0.225),
@@ -61,16 +61,19 @@ def visualize(model_name, model, device, original_image, p_image, true_label, ba
     original_image = inv_normalize(original_image[0]).cpu().detach()
     p_image = inv_normalize(p_image[0]).cpu().detach()
     perturbation = p_image - original_image
+    perturbation = torch.where(perturbation < 0, perturbation + 1, perturbation)
 
     # get prediction label and probability
     probs_original, preds_original = torch.max(torch.nn.functional.softmax(logits_of_original_image, dim=1), 1)
     probs_perturbed, preds_perturbed = torch.max(torch.nn.functional.softmax(logits_of_p_image, dim=1), 1)
+    probs_p, preds_p = torch.max(torch.nn.functional.softmax(logits_of_perturbation, dim=1), 1)
 
     # Convert label index to name
     mapping = get_label_mapping()
     true_label_str = cut_long_label(mapping.iloc[int(true_label)]['label'])
     pred_label_original_str = cut_long_label(mapping.iloc[preds_original.item()]['label'])
     pred_label_perturbed_str = cut_long_label(mapping.iloc[preds_perturbed.item()]['label'])
+    pred_label_p_str = cut_long_label(mapping.iloc[preds_p.item()]['label'])
 
     # Set up the plot
     fig, axs = plt.subplots(1, 3, figsize=(12, 4))
@@ -81,7 +84,7 @@ def visualize(model_name, model, device, original_image, p_image, true_label, ba
     axs[0].axis('off')
 
     axs[1].imshow(perturbation.permute(1, 2, 0))
-    axs[1].set_title(f'Perturbation\nEpsilon: {epsilon}')
+    axs[1].set_title(f'Perturbation with Epsilon = {epsilon}\n{pred_label_p_str}\nProb: {probs_p.item():.2%}')
     axs[1].axis('off')
 
     axs[2].imshow(p_image.permute(1, 2, 0))
