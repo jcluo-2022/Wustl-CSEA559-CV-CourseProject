@@ -39,28 +39,6 @@ def parse_args():
                              'cait: CaiT-S36')
 
     parser.add_argument('--model_path', type=str, required=True, help='The path of the model checkpoint')
-
-    parser.add_argument('--throughput', action='store_true', help='Test throughput only')
-    parser.add_argument('--resume', type=str, help='Resume training')
-
-    # data augmentation
-    parser.add_argument('--mixup', action='store_true', default=True)
-    parser.add_argument('--no-mixup', action='store_false', dest='mixup', help='Disable mixup')
-    parser.add_argument('--cutmix', action='store_true', default=True)
-    parser.add_argument('--no-cutmix', action='store_false', dest='cutmix', help='Disable cutmix')
-    parser.add_argument('--randerase', action='store_true', default=True)
-    parser.add_argument('--no-randerase', action='store_false', dest='randerase', help='Disable random erasing')
-    parser.add_argument('--randaug', action='store_true', default=False)
-
-    # optimizer
-    parser.add_argument('--optim', type=str, default='adamw', choices=['adamw', 'sgd'])
-    parser.add_argument('--nesterov', action='store_true', default=True, help='Use nesterov momentum for SGD')
-    parser.add_argument('--no-nesterov', action='store_false', dest='nesterov', help='Disable nesterov')
-    parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate for optimizer')
-    parser.add_argument('--wd', type=float, default=0.05, help='Weight decay for optimizer')
-
-    parser.add_argument('--label-smooth', type=float, default=0.1, help='Label smoothing percent')
-
     args, _ = parser.parse_known_args()
 
     return args
@@ -90,20 +68,6 @@ def load_model(model_name, model_path):
 
     return model, batch_size
 
-
-def load_optimizer(args, model):
-    if args.optim == 'adamw':
-        optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    elif args.optim == 'sgd':
-        optimizer = optim.SGD(model.parameters(), lr=args.lr, weight_decay=args.wd, momentum=0.9,
-                              nesterov=args.nesterov)
-    else:
-        logger.error('Invalid optimizer name, please use either adamw or sgd')
-        sys.exit(1)
-
-    return optimizer
-
-
 if __name__ == '__main__':
     args = parse_args()
 
@@ -114,9 +78,6 @@ if __name__ == '__main__':
     model = model.to(device)
 
     img_size = 384
-
-    randaug_magnitude = 9 if args.randaug else 0
-    # train_loader = load_train_data(img_size, randaug_magnitude, batch_size)
     val_loader = load_val_data(img_size, batch_size, False)
 
     # Set logger
@@ -172,6 +133,14 @@ if __name__ == '__main__':
     # load perturbation tensors
     base_perturbations = torch.load(f'./FGSD/{args.model}/all_perturbations.pt')
     # set epsilon, which is the magnitude of the perturbation
+
+    means = torch.tensor([0.485, 0.456, 0.406], dtype=torch.float32)
+    stds = torch.tensor([0.229, 0.224, 0.225], dtype=torch.float32)
+
+    # 直接为整个batch创建min_vals和max_vals
+    min_vals = ((0 - means) / stds).view(1, 3, 1, 1).expand(batch_size, 3, img_size, img_size)
+    max_vals = ((1 - means) / stds).view(1, 3, 1, 1).expand(batch_size, 3, img_size, img_size)
+
     epsilon_values = [0, 1, 2, 4, 8, 16, 24, 32, 48, 64, 96, 128]
     top_1_accs = []
     top_5_accs = []
@@ -190,6 +159,7 @@ if __name__ == '__main__':
             start_idx = batch_id * data.size(0)
             end_idx = start_idx + data.size(0)
             perturbed_data = data + scaled_perturbations[start_idx:end_idx].to(data.device)
+            perturbed_data = torch.max(torch.min(perturbed_data, max_vals), min_vals)
 
             # Generate Adversarial Samples
             perturbed_images.append(perturbed_data)
