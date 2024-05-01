@@ -168,15 +168,15 @@ if __name__ == '__main__':
             # Save Adversarial Samples and their perturbations
             for idx, p_image in enumerate(perturbed_data):
                 p_image_tensor = p_image.detach()
-                perturbation = p_image_tensor - data[idx]
-
-                perturb_dir = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbation/{int(target[idx])}'
-                perturbed_dir = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbed_image/{int(target[idx])}'
-                os.makedirs(perturb_dir, exist_ok=True)
-                os.makedirs(perturbed_dir, exist_ok=True)
-
-                save_image(perturbation, os.path.join(perturb_dir, f'batch_{batch_id}_image_{idx}.png'))
-                save_image(p_image_tensor, os.path.join(perturbed_dir, f'batch_{batch_id}_image_{idx}.png'))
+                # perturbation = p_image_tensor - data[idx]
+                #
+                # perturb_dir = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbation/{int(target[idx])}'
+                # perturbed_dir = f'./FGSD/{args.model}/epsilon_{epsilon}/perturbed_image/{int(target[idx])}'
+                # os.makedirs(perturb_dir, exist_ok=True)
+                # os.makedirs(perturbed_dir, exist_ok=True)
+                #
+                # save_image(perturbation, os.path.join(perturb_dir, f'batch_{batch_id}_image_{idx}.png'))
+                # save_image(p_image_tensor, os.path.join(perturbed_dir, f'batch_{batch_id}_image_{idx}.png'))
 
                 attack_success = visualize(args.model, model, device, data[idx], p_image_tensor, target[idx], batch_id,
                                            idx, epsilon)
