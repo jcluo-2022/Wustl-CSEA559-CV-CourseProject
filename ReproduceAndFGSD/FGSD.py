@@ -27,7 +27,7 @@ from art.attacks.evasion import FastGradientMethod
 from art.estimators.classification import PyTorchClassifier
 from logging import getLogger
 
-from visualize import visualize
+from visualize import visualize, check_attack_success
 
 
 def parse_args():
@@ -107,7 +107,7 @@ if __name__ == '__main__':
         input_shape=(3, img_size, img_size),
         nb_classes=200
     )
-    chunk_size = 50
+    chunk_size = 125
     # base_epsilon = 1 / 255.0 / 0.225
     # attack_base = FastGradientMethod(estimator=classifier, eps=base_epsilon)
     # all_perturbations = []
@@ -179,7 +179,7 @@ if __name__ == '__main__':
             # Save Adversarial Samples and their perturbations
             for idx, p_image in enumerate(perturbed_data):
                 p_image_tensor = p_image.detach()
-                top_1_success, top5_success, attack_success = visualize(args.model, model, device, data[idx], p_image_tensor, target[idx], batch_id,
+                top_1_success, top5_success, attack_success = check_attack_success(args.model, model, device, data[idx], p_image_tensor, target[idx], batch_id,
                                            idx, epsilon)
                 if attack_success:
                     success_attack_count += 1
