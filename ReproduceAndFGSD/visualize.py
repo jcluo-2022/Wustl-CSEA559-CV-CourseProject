@@ -104,3 +104,24 @@ def visualize(model_name, model, device, original_image, p_image, true_label, ba
     plt.close(fig)
 
     return logits_of_p_image[:, true_label] < logits_of_original_image[:, true_label]
+
+@torch.no_grad()
+def check_attack_success(model, device, original_image, p_image, true_label):
+    model.eval()
+    original_image = original_image.unsqueeze(0).to(device)
+    p_image = p_image.unsqueeze(0).to(device)
+
+    # get the perturbed image
+    # Predict the classes for the original and perturbed images
+    logits_of_original_image = model(original_image)
+    logits_of_p_image = model(p_image)
+
+    # # get prediction label and probability
+    top1_pred = torch.max(logits_of_p_image, 1)[1]
+    top1_correct = (top1_pred == true_label)
+
+    # check the index of the top5 possible labels
+    top5_preds = torch.topk(logits_of_p_image, 5, dim=1)[1]
+    top5_correct = true_label in top5_preds[0]  # Assuming batch size of 1
+
+    return top1_correct, top5_correct, logits_of_p_image[:, true_label] < logits_of_original_image[:, true_label]
